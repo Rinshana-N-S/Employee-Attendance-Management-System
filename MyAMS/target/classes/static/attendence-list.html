@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attendance Table</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        th {
+            background: #3f37c9;
+            color: white;
+        }
+        
+        body{
+        background:linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80) no-repeat center center fixed;
+    background-size: cover;
+    color:white;
+        }
+    </style>
+</head>
+<body>
+    <h2>Employee Attendance Records</h2>
+    <table id="attendanceTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>QR Code</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Casual Leave</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        fetch("/api/attendance")
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Network response was not OK");
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Fetched data:", data); // DEBUG: check data
+                const tableBody = document.querySelector("#attendanceTable tbody");
+                if (!data || data.length === 0) {
+                    tableBody.innerHTML = "<tr><td colspan='6'>No records found</td></tr>";
+                } else {
+                    data.forEach(item => {
+                        const row = `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td>${item.employeeName}</td>
+                                <td>${item.qrCodeData}</td>
+                                <td>${item.presentDate}</td>
+                                <td>${new Date(item.timestamp).toLocaleTimeString()}</td>
+                                <td>${item.casualLeave ? "Yes" : "No"}</td>
+                            </tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error("Fetch error:", error);
+                document.querySelector("#attendanceTable tbody").innerHTML =
+                    `<tr><td colspan="6" style="color: red;">Failed to load data</td></tr>`;
+            });
+    </script>
+</body>
+</html>
+ 

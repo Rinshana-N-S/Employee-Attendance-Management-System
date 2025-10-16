@@ -1,0 +1,441 @@
+<!-- <!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee QR Code Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #000000;
+      --secondary: #333333;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --success: #4cc9f0;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      color: var(--dark);
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                  url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+      background-size: cover;
+    }
+    
+    .container {
+      border-radius: 10px;
+      box-shadow: var(--box-shadow);
+      padding: 2rem;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    h1 {
+      color: white;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: white;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      margin-top: 10px;
+    }
+    
+    button:hover {
+      background-color: var(--secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    #qrcode {
+      margin: 2rem auto;
+      padding: 20px;
+      border: 1px dashed #e2e8f0;
+      border-radius: var(--border-radius);
+      display: flex;
+      justify-content: center;
+      min-height: 256px;
+      background-color: white;
+    }
+    
+    .instructions {
+      margin-top: 1.5rem;
+      font-size: 14px;
+      color: #ffffff;
+    }
+    
+    .download-btn {
+      display: none;
+      margin-top: 1rem;
+    }
+    
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.5rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Employee QR Code Generator</h1>
+    
+    <form id="employeeForm" th:action="@{/generate-qr}" method="post" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="empName">Full Name</label>
+        <input type="text" id="empName" name="employeeName" th:value="${employee != null} ? ${employee.name}" placeholder="Enter employee name" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="empId">Employee ID</label>
+        <input type="text" id="empId" name="employeeId" th:value="${employee != null} ? ${employee.id}" placeholder="Enter employee ID" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="casualLeave">Casual Leave</label>
+        <select id="casualLeave" name="casualLeave" class="form-control">
+          <option value="false">No</option>
+          <option value="true">Yes</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="selfie">Upload Selfie</label>
+        <input type="file" id="selfie" name="selfie" accept="image/*" capture="user">
+      </div>
+      
+      <button type="button" onclick="generateQR()">Generate QR Code</button>
+      <button type="submit" class="download-btn" id="downloadBtn">Download QR Code</button>
+    </form>
+    
+    <div id="qrcode"></div>
+    
+    <p class="instructions">Fill in the details and click "Generate QR Code" to create your personalized employee QR.</p>
+  </div>
+
+  <script>
+    function generateQR() {
+      let name = document.getElementById("empName").value;
+      let id = document.getElementById("empId").value;
+      let date = document.getElementById("date").value;
+      let casualLeave = document.getElementById("casualLeave").value;
+
+      if (!name || !id || !date) {
+        alert("Please fill in all fields before generating the QR code.");
+        return;
+      }
+
+      // Create structured data in JSON format for better scanning
+      let data = JSON.stringify({
+        name: name,
+        employeeId: id,
+        date: date,
+        casualLeave: casualLeave === 'true'
+      });
+
+      document.getElementById("qrcode").innerHTML = "";
+      let qrcode = new QRCode(document.getElementById("qrcode"), {
+        text: data,
+        width: 256,
+        height: 256,
+        colorDark: "#000000", // Pure black for better scanning
+        colorLight: "#ffffff", // Pure white background
+        correctLevel: QRCode.CorrectLevel.H // Highest error correction
+      });
+
+      // Show download button
+      document.getElementById("downloadBtn").style.display = "block";
+      
+      // Add download functionality
+      document.getElementById("downloadBtn").onclick = function() {
+        let canvas = document.querySelector("#qrcode canvas");
+        let link = document.createElement('a');
+        link.download = `employee_${id}_qrcode.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      };
+    }
+  </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee QR Code Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #000000;
+      --secondary: #333333;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --success: #4cc9f0;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      color: var(--dark);
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+        url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+      background-size: cover;
+    }
+
+    .container {
+      border-radius: 10px;
+      box-shadow: var(--box-shadow);
+      padding: 2rem;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      color: white;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: white;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: var(--secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    #qrcode {
+      margin: 2rem auto;
+      padding: 20px;
+      border: 1px dashed #e2e8f0;
+      border-radius: var(--border-radius);
+      display: flex;
+      justify-content: center;
+      min-height: 256px;
+      background-color: white;
+    }
+
+    .instructions {
+      margin-top: 1.5rem;
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    .download-btn {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Employee QR Code Generator</h1>
+
+    <form id="employeeForm" th:action="@{/generate-qr}" method="post" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="empName">Full Name</label>
+        <input type="text" id="empName" name="employeeName" th:value="${employee != null} ? ${employee.name}" placeholder="Enter employee name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="empId">Employee ID</label>
+        <input type="text" id="empId" name="employeeId" th:value="${employee != null} ? ${employee.id}" placeholder="Enter employee ID" required>
+      </div>
+
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" required>
+      </div>
+
+      <div class="form-group">
+        <label for="casualLeave">Casual Leave</label>
+        <select id="casualLeave" name="casualLeave" class="form-control">
+          <option value="false">No</option>
+          <option value="true">Yes</option>
+        </select>
+      </div>
+
+      <button type="button" onclick="generateQR()">Generate QR Code</button>
+      <button type="submit" class="download-btn" id="downloadBtn">Download QR Code</button>
+    </form>
+
+    <div id="qrcode"></div>
+
+    <p class="instructions">Fill in the details and click "Generate QR Code" to create your personalized employee QR.</p>
+  </div>
+
+  <script>
+    function generateQR() {
+      let name = document.getElementById("empName").value;
+      let id = document.getElementById("empId").value;
+      let date = document.getElementById("date").value;
+      let casualLeave = document.getElementById("casualLeave").value;
+
+      if (!name || !id || !date) {
+        alert("Please fill in all fields before generating the QR code.");
+        return;
+      }
+
+      let data = JSON.stringify({
+        name: name,
+        employeeId: id,
+        date: date,
+        casualLeave: casualLeave === 'true'
+      });
+
+      document.getElementById("qrcode").innerHTML = "";
+      let qrcode = new QRCode(document.getElementById("qrcode"), {
+        text: data,
+        width: 256,
+        height: 256,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById("downloadBtn").style.display = "block";
+
+      document.getElementById("downloadBtn").onclick = function() {
+        let canvas = document.querySelector("#qrcode canvas");
+        let link = document.createElement('a');
+        link.download = `employee_${id}_qrcode.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      };
+    }
+  </script>
+</body>
+</html>

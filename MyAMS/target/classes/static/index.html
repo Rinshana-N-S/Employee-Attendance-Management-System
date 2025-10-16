@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Attendance</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --secondary: #3f37c9;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --error: #f72585;
+      --success: #4cc9f0;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f5f7ff;
+      color: white;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background-color: transparent(0,0,0.5);
+     
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      padding: 2rem;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+    }
+    h2 {
+      color: white;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+    .btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      margin-top: 10px;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn:hover {
+      background-color: var(--secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+    .scanner-wrapper {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    #qr-reader {
+      width: 300px !important;
+      height: 300px !important;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    .camera-container {
+      margin: 20px 0;
+    }
+    video {
+      width: 300px;
+      height: auto;
+      border-radius: var(--border-radius);
+      border: 2px solid #e9ecef;
+    }
+    canvas {
+      display: none;
+    }
+    .status-message {
+      margin-top: 1rem;
+      padding: 10px;
+      border-radius: var(--border-radius);
+      display: none;
+    }
+    .status-message.success {
+      display: block;
+      background-color: rgba(76, 201, 240, 0.2);
+      color: var(--success);
+    }
+    .status-message.error {
+      display: block;
+      background-color: rgba(247, 37, 133, 0.2);
+      color: var(--error);
+    }
+    .scan-instruction {
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    .qr-result {
+      font-weight: 500;
+      color: white;
+    }
+    body{
+    background:linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80) no-repeat center center fixed;
+    background-size: cover;
+   
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Employee Attendance</h2>
+
+    <div class="scan-instruction">Scan your QR code below</div>
+    <div class="scanner-wrapper">
+      <div id="qr-reader"></div>
+    </div>
+    <p style="text-align: center;">Scanned QR Code: <span class="qr-result" id="qr-result">Not scanned yet</span></p>
+
+    <div class="camera-container">
+      <div class="scan-instruction">Take your selfie</div>
+      <video id="camera" autoplay></video>
+      <canvas id="snapshot"></canvas>
+    </div>
+
+    <button class="btn" id="submitBtn">Submit Attendance</button>
+    <div id="statusMessage" class="status-message"></div>
+  </div>
+
+  <script>
+    let qrData = "";
+    let stream = null;
+    let html5QrCode = null;
+    let employeeData = null;
+
+    function initQRScanner() {
+      html5QrCode = new Html5Qrcode("qr-reader");
+
+      const qrCodeSuccessCallback = (decodedText) => {
+        try {
+          employeeData = JSON.parse(decodedText);
+          qrData = decodedText;
+          document.getElementById("qr-result").innerText = decodedText;
+          html5QrCode.stop().then(() => {
+            showStatus("QR code scanned successfully!", "success");
+          }).catch(console.error);
+        } catch (e) {
+          showStatus("Invalid QR code format", "error");
+          console.error("Error parsing QR code:", e);
+        }
+      };
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          disableFlip: false
+        },
+        qrCodeSuccessCallback,
+        (errorMessage) => {
+          console.warn("QR Scanner error:", errorMessage);
+        }
+      ).catch(err => {
+        console.error("Unable to start QR scanner", err);
+        showStatus("Could not start QR scanner. Please check camera permissions.", "error");
+      });
+    }
+
+    function initCamera() {
+      navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 250 },
+          height: { ideal: 250 }
+        },
+        audio: false
+      })
+      .then(s => {
+        stream = s;
+        document.getElementById("camera").srcObject = stream;
+      })
+      .catch(err => {
+        console.error("Camera error:", err);
+        showStatus("Could not access camera. Please check permissions.", "error");
+      });
+    }
+
+    function showStatus(message, type) {
+      const statusEl = document.getElementById("statusMessage");
+      statusEl.textContent = message;
+      statusEl.className = "status-message " + type;
+
+      setTimeout(() => {
+        statusEl.style.opacity = '0';
+        setTimeout(() => {
+          statusEl.className = "status-message";
+          statusEl.style.opacity = '1';
+        }, 500);
+      }, 5000);
+    }
+
+    async function submitAttendance() {
+      if (!qrData || !employeeData) {
+        showStatus("Please scan your QR code first", "error");
+        return false;
+      }
+
+      const canvas = document.getElementById("snapshot");
+      const video = document.getElementById("camera");
+      const btn = document.getElementById("submitBtn");
+
+      btn.disabled = true;
+      btn.textContent = "Processing...";
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+
+      try {
+        const blob = await new Promise(resolve => {
+          canvas.toBlob(resolve, "image/jpeg", 0.9);
+        });
+
+        const formData = new FormData();
+        formData.append("employeeName", employeeData.name || "");  // name from QR
+        formData.append("employeeId", employeeData.employeeId || "");
+        formData.append("qrCodeData", qrData);
+        formData.append("selfie", blob, `${employeeData.employeeId}_${new Date().toISOString()}.jpg`);
+        formData.append("date", employeeData.date || new Date().toISOString());
+        formData.append("casualLeave", employeeData.casualLeave || false);
+
+        const response = await fetch("/api/attendance", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error("Server responded with error");
+        }
+
+        const result = await response.json();
+        showStatus("Attendance recorded successfully!", "success");
+        return true;
+
+      } catch (error) {
+        console.error("Submission error:", error);
+        showStatus("Failed to submit attendance. Please try again.", "error");
+        return false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Submit Attendance";
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initQRScanner();
+      initCamera();
+
+      document.getElementById("submitBtn").addEventListener("click", async () => {
+        const success = await submitAttendance();
+        if (success) {
+          setTimeout(() => {
+            window.location.href = "success.html";
+          }, 2000);
+        }
+      });
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (html5QrCode) {
+        html5QrCode.stop().catch(console.error);
+      }
+    });
+  </script>
+</body>
+</html>
